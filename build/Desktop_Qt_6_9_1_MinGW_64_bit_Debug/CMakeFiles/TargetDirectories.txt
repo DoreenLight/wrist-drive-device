@@ -1,0 +1,9 @@
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/Uart_controller.dir
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/edit_cache.dir
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/rebuild_cache.dir
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/list_install_components.dir
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/install.dir
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/install/local.dir
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/install/strip.dir
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/Uart_controller_autogen_timestamp_deps.dir
+E:/0-Motor/9_wanguanjie/Uart_controller/build/Desktop_Qt_6_9_1_MinGW_64_bit_Debug/CMakeFiles/Uart_controller_autogen.dir

@@ -1,0 +1,12 @@
+# 构建产物（Qt Creator / CMake）
+/build*/
+/CMakeCache.txt
+/CMakeFiles/
+/cmake_install.cmake
+/CMakeUserPresets.json
+/Makefile
+/*.pro.user
+
+# 程序运行时产生的数据
+/error_frames.txt
+/telemetry_*.csv

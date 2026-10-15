@@ -11,7 +11,7 @@ error_frames.txt
 telemetry_*.csv
 
 # ── 采集数据（本地保留，不上传）───────────────
-/data/telemetry/*.csv
+/02_采集数据/telemetry/*.csv
 
 # ── 临时文件 ──────────────────────────────────
 *.tmp

@@ -1,7 +1,7 @@
 ﻿# ============================================================
 # 腕部驱动设备上位机 — 一键构建脚本
 #
-# 作用：用 Qt 6.8.2 + MinGW 13.1 编译 src/ 下的源码，
+# 作用：用 Qt 6.8.2 + MinGW 13.1 编译 01_上位机程序/ 下的源码，
 #       并把 Qt / MinGW 运行库部署到 exe 同目录，使其可直接双击运行。
 #
 # 背景：Qt 的 moc.exe 无法处理含中文的路径（会把 UTF-8 路径按 GBK 解析，
@@ -46,7 +46,11 @@ if (-not (Test-Path $link)) {
     Write-Host "[目录联接] 已创建 $link  ->  $root"
 }
 
-$srcAscii   = Join-Path $link 'src'
+$srcAscii   = Join-Path $link 'build/source'
+$sourceTarget = Join-Path $root '01_上位机程序'
+if (-not (Test-Path -LiteralPath $srcAscii)) {
+    New-Item -ItemType Junction -Path $srcAscii -Target $sourceTarget | Out-Null
+}
 $buildAscii = Join-Path $link ('build\' + $kitName)
 if (-not (Test-Path (Join-Path $srcAscii 'CMakeLists.txt'))) {
     throw "找不到源码：$srcAscii\CMakeLists.txt（目录联接是否失效？）"
@@ -62,6 +66,7 @@ $fwdGxx    = "$mingwDir\bin\g++.exe" -replace '\\', '/'
 $fwdNinja  = $ninjaExe -replace '\\', '/'
 
 $cfgArgs = @(
+    '--fresh',
     '-S', $srcAscii,
     '-B', $buildAscii,
     '-G', 'Ninja',

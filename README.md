@@ -11,20 +11,22 @@
 ```text
 腕部驱动设备/
 ├─ README.md                  # 本文件：项目总览与快速上手
-├─ docs/                      # 全部说明文档
+├─ 00_项目说明/                      # 全部说明文档
 │  ├─ 项目说明.md              # 项目详解：功能、架构、源码逐文件说明
 │  ├─ 使用手册_连接与采集.md    # 硬件连接、串口配置、数据采集流程
-│  └─ 串口协议说明.md          # 帧格式、命令码、IO ID、浮点参数 ID
-├─ src/                       # 源码（Git 仓库根目录）
+│  ├─ 串口协议说明.md          # 帧格式、命令码、IO ID、浮点参数 ID
+│  ├─ 串口连接排查记录.md      # 设备识别、驱动状态、端口/波特率实测与误码定位
+│  └─ 目录调整记录.md          # 目录方案迁移记录
+├─ 01_上位机程序/                       # 自有上位机源码
 │  ├─ CMakeLists.txt
 │  ├─ main.cpp
 │  ├─ mainwindow.h / .cpp / .ui
 │  ├─ protocolworker.h / .cpp
 │  ├─ floatiddefs.h
-│  └─ .git/
-├─ data/
+│  └─ .gitignore
+├─ 02_采集数据/
 │  └─ telemetry/              # 采集到的遥测 CSV 数据
-├─ tools/
+├─ 03_构建与辅助工具/
 │  └─ build.ps1               # 一键构建脚本
 └─ build/                     # 构建产物（不纳入版本控制）
    ├─ Desktop_Qt_6_9_1_MinGW_64_bit_Debug/    # 旧版构建（Qt 6.9.1，历史留存）
@@ -52,14 +54,14 @@ Qt 与 MinGW 运行库已部署到该 exe 同目录，可直接运行，无需�
 在 PowerShell 中执行：
 
 ```powershell
-.\tools\build.ps1
+.\03_构建与辅助工具\build.ps1
 ```
 
 脚本会自动配置 CMake、编译并把运行库部署到 exe 同目录。
 
 ### 用 Qt Creator 打开
 
-打开 `src\CMakeLists.txt`，选择 **Desktop Qt 6.8.2 MinGW 64-bit** 套件。
+打开 `01_上位机程序\CMakeLists.txt`，选择 **Desktop Qt 6.8.2 MinGW 64-bit** 套件。
 
 > **重要**：必须使用 **Release** 配置。本机 Qt 只安装了 Release 运行库，
 > 没有 Debug 版 DLL（`Qt6Cored.dll` 等），Debug 配置编译出的程序无法运行。
@@ -88,7 +90,7 @@ Qt 的 `moc.exe` 无法处理含中文的路径，会报：
 moc: Cannot create C:/Users/Lenovo/Desktop/鑵曢儴椹卞姩璁惧/... Error: No such file or directory
 ```
 
-因此 `tools\build.ps1` 会自动创建一个 ASCII 路径的目录联接（junction）：
+因此 `03_构建与辅助工具\build.ps1` 会自动创建一个 ASCII 路径的目录联接（junction）：
 
 ```text
 C:\Users\Lenovo\uart_wrist  →  C:\Users\Lenovo\Desktop\腕部驱动设备
@@ -104,7 +106,7 @@ C:\Users\Lenovo\uart_wrist  →  C:\Users\Lenovo\Desktop\腕部驱动设备
 ### 3. 数据文件写入位置
 
 CSV 记录与 `error_frames.txt` 写入 **exe 所在目录**（即程序运行目录），
-而不是 `data\telemetry\`。采集完数据后需要手动归档到 `data\telemetry\`。
+而不是 `02_采集数据\telemetry\`。采集完数据后需要手动归档到 `02_采集数据\telemetry\`。
 
 ### 4. 记录功能只在停止时落盘
 
@@ -121,3 +123,9 @@ CSV 记录与 `error_frames.txt` 写入 **exe 所在目录**（即程序运行�
 - 设备处于安全状态，急停/断电方式可用；
 - 空载测试通过后再接触人体；
 - 谨慎使用机械零点、清除故障、力传感器清零、Flash 保存等持久化操作。
+
+## 中文目录整理（2026-10-15）
+
+外层目录已按 B 方案迁移为编号加中文职责名。技术文件名、构建输出和虚拟环境保留。目录映射和验证情况见 `00_项目说明/目录调整记录.md`。
+
+根目录 `启动腕部上位机.cmd` 用于启动；`启动腕部上位机.cmd --check-paths` 检查部署和采集归档目录，不连接设备。Qt 构建使用 build/source 源码联接绕过中文路径限制，该联接指向唯一源码目录，不是副本。CSV 原有写入位置仍为 exe 所在目录，02_采集数据/telemetry 用于手工归档。

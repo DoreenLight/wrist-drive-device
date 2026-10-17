@@ -15,9 +15,12 @@
 #include <QThread>
 #include <QTimer>
 #include <QMutex>
+#include <QLegendMarker>
 #include <QLineSeries>
+#include <QScatterSeries>
 #include <QChart>
 #include <QChartView>
+#include <QElapsedTimer>
 #include <QValueAxis>
 
 class ProtocolWorker;
@@ -183,6 +186,81 @@ private:
                          const QColor *colors);
     void feedMotorChart(MotorChartCtx &ctx, const QMap<uint8_t, float> &values);
 
+    // ── 参考轨迹跟踪视图（康复页；参考轨迹由上位机本地生成）────
+    // 注意：本视图只做“本地计时 + 绘图”，不下发任何控制指令。
+    struct TrackerCtx {
+        // 图对象（绘制顺序即叠加顺序：先加的在下层）
+        QChartView *view = nullptr;
+        QChart *chart = nullptr;
+        QValueAxis *axisX = nullptr;
+        QValueAxis *axisY = nullptr;
+        QLineSeries *rawSeries = nullptr;         // 下位机 0x0B/0x1D 原始轨迹（不复用为参考）
+        QLineSeries *histTargetSeries = nullptr;  // 历史目标（可选显示）
+        QLineSeries *histActualSeries = nullptr;  // 历史实测（可选显示）
+        QLineSeries *refSeries = nullptr;         // 🟢 本地生成的参考轨迹
+        QLineSeries *cursorSeries = nullptr;      // 时间游标竖直线
+        QScatterSeries *ptTarget = nullptr;       // 🔵 游标上的目标点
+        QScatterSeries *ptActual = nullptr;       // 🟠 游标上的实测点
+        // 控件
+        QCheckBox *refCheck = nullptr;
+        QCheckBox *histCheck = nullptr;
+        QCheckBox *rawCheck = nullptr;
+        QLabel *readoutLabel = nullptr;
+
+        // 标识与数据 ID
+        QString name;
+        uint8_t targetId = 0x00;
+        uint8_t actualId = 0x00;
+        uint8_t rawId = 0x00;
+
+        // 参考轨迹参数（从现有「主动」选项卡输入框读取，只读不进下发）
+        float limit1 = -30.0f;
+        float limit2 = 30.0f;
+        float speed = 30.0f;    // °/s
+        float pause = 2.0f;     // s
+        int cycles = 5;
+
+        // 本地生成的参考轨迹与总时长
+        QList<QPointF> refTraj;
+        qreal totalT = 0.0;
+
+        // 实验状态机
+        bool running = false;
+        bool finished = false;
+        QElapsedTimer clock;
+        qreal nowT = 0.0;
+
+        // 实时样本
+        // 历史轨迹不再单独缓存：直接按接收时间追加到 histTarget/histActual 两条 series
+        // （扫描式绘图，见 feedTrackerSample）。这里只保存“最新值”用于游标上的当前点。
+        bool hasTarget = false;
+        bool hasActual = false;
+        bool hasRaw = false;
+        float lastTarget = 0.0f;
+        float lastActual = 0.0f;
+        float lastRaw = 0.0f;
+        qint64 lastTargetMs = 0;
+        qint64 lastActualMs = 0;
+        qint64 lastRawMs = 0;
+        int dropped = 0;        // 被合理性过滤丢弃的样本数
+    };
+    TrackerCtx trackerM1;
+    TrackerCtx trackerM2;
+    QSpinBox *trackerCyclesSpin = nullptr;
+    QPushButton *trackerStartBtn = nullptr;
+    QLabel *trackerStateLabel = nullptr;
+    QTimer *mTrackerTimer = nullptr;
+    QLineEdit *m1ActEdits[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+    QLineEdit *m2ActEdits[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+
+    void buildTrackerChart(TrackerCtx &ctx, QWidget *parent);
+    void loadTrackerParams(TrackerCtx &ctx);
+    void applyReference(bool resetState);
+    void startExperiment();
+    void updateTrackerViews();
+    void refreshTrackerLegend(TrackerCtx &ctx);   // 图例只保留三条数据曲线
+    void feedTrackerSample(const QMap<uint8_t, float> &values, qint64 ms);
+
     // ── Page 3: 电机控制调试 ──────────────────────────
     // Motor1 遥测标签
     QLabel *m1AngleLabel;
@@ -203,8 +281,6 @@ private:
     QComboBox *m2ModeCombo;         // M2 运行模式
     MotorChartCtx m1ChartCtx;       // M1 曲线图 (电机页)
     MotorChartCtx m2ChartCtx;       // M2 曲线图 (电机页)
-    MotorChartCtx rehabM1Ctx;       // M1 曲线图 (康复页)
-    MotorChartCtx rehabM2Ctx;       // M2 曲线图 (康复页)
     // 遥测队列 + 定时刷新
     QList<QMap<uint8_t, float>> mTelemetryQueue;
     QMutex mTelemetryMutex;

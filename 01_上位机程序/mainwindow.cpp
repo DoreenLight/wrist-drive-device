@@ -13,6 +13,7 @@
 #include <QRegularExpression>
 #include <QSerialPortInfo>
 #include <QTextStream>
+#include <QScrollArea>
 #include <QSplitter>
 #include <QVBoxLayout>
 
@@ -167,8 +168,8 @@ MainWindow::MainWindow(QWidget *parent)
         }
         feedMotorChart(m1ChartCtx, merged);
         feedMotorChart(m2ChartCtx, merged);
-        feedMotorChart(rehabM1Ctx, merged);
-        feedMotorChart(rehabM2Ctx, merged);
+        // 康复页的两张图已改为「轨迹跟踪视图」（本地参考轨迹 + 时间游标），
+        // 不再走这条 50 ms 批量合并（同 ID 取最后一帧）的通道。
     });
     mChartTimer->start();
 
@@ -1031,6 +1032,10 @@ void MainWindow::onTelemetryReceived(const QMap<uint8_t, float> &values)
     // ── 更新康复页面标签 (轻量操作) ────────────────
     updateMotorDisplay(values);
 
+    // ── 参考轨迹跟踪视图：记录带时间戳的原始样本 ────
+    // 必须单独一路，不能复用上面的 50 ms 合并结果（否则点会画在错位的时间上）
+    feedTrackerSample(values, QDateTime::currentMSecsSinceEpoch());
+
     // ── 更新遥测表格 ────────────────────────────────
     if (telemetryTable) {
         for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
@@ -1109,10 +1114,9 @@ void MainWindow::onProtocolPortOpened()
     statChkErr->setText(QStringLiteral("0"));
     statTelemetry->setText(QStringLiteral("0"));
     statAck->setText(QStringLiteral("0"));
-    // 重置 motor 曲线
+    // 重置 motor 曲线（康复页的轨迹跟踪视图由实验状态机自管，不在此重置）
     m1ChartCtx.time = 0; m2ChartCtx.time = 0;
-    rehabM1Ctx.time = 0; rehabM2Ctx.time = 0;
-    for (auto &ctx : {&m1ChartCtx, &m2ChartCtx, &rehabM1Ctx, &rehabM2Ctx}) {
+    for (auto &ctx : {&m1ChartCtx, &m2ChartCtx}) {
         for (auto it = ctx->series.begin(); it != ctx->series.end(); ++it) {
             it.value()->clear();
             ctx->buffers[it.key()].clear();
@@ -1547,7 +1551,21 @@ void MainWindow::createMotorControlPage()
 void MainWindow::createRehabPage()
 {
     rehabPage = new QWidget(this);
-    auto *rootLayout = new QVBoxLayout(rehabPage);
+
+    // 康复页内容较多（双栏康复面板 + 两张轨迹跟踪图 + 实时状态 + 六维力 + 治疗日志），
+    // 在默认窗口尺寸下总高度会超过窗口。套一层 QScrollArea：
+    // 窗口够大时与原来一样铺满，窗口不够时出现滚动条，不会把底部内容切掉。
+    auto *pageLayout = new QVBoxLayout(rehabPage);
+    pageLayout->setContentsMargins(0, 0, 0, 0);
+    auto *scrollArea = new QScrollArea(rehabPage);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    auto *content = new QWidget();
+    scrollArea->setWidget(content);
+    pageLayout->addWidget(scrollArea);
+
+    auto *rootLayout = new QVBoxLayout(content);
     rootLayout->setContentsMargins(12, 8, 12, 8);
     rootLayout->setSpacing(6);
 
@@ -1632,6 +1650,9 @@ void MainWindow::createRehabPage()
         btnRow->addWidget(startBtn);
         btnRow->addWidget(stopBtn);
         lay->addLayout(btnRow);
+        // 末尾加 stretch：窗口变大时让空白落在底部，参数行保持紧凑，
+        // 否则每行（含 QLabel）会被拉伸成几十像素的间距，把下方区域挤出去。
+        lay->addStretch();
 
         connect(startBtn, &QPushButton::clicked, this, [=]() {
             if (!protoWorker->isOpen()) return;
@@ -1681,7 +1702,8 @@ void MainWindow::createRehabPage()
         {"Tmax(N·m):",    0x0F, "5"},
         {"刚度k:",        0x10, "10"},
     };
-    for (const auto &p : actParams) {
+    for (int pi = 0; pi < 6; ++pi) {
+        const ActParam &p = actParams[pi];
         auto *row = new QHBoxLayout;
         row->addWidget(new QLabel(QString::fromUtf8(p.label), m1ActiveBox));
         auto *edit = new QLineEdit(m1ActiveBox);
@@ -1689,6 +1711,8 @@ void MainWindow::createRehabPage()
         edit->setMaximumHeight(24);
         row->addWidget(edit, 1);
         m1ActLay->addLayout(row);
+        // 供轨迹跟踪视图读取参考轨迹参数（只读，实验开始不会把这些值下发）
+        m1ActEdits[pi] = edit;
         connect(edit, &QLineEdit::returnPressed, this, [this, edit, fid = p.floatId, label = p.label]() {
             if (!protoWorker->isOpen()) return;
             bool ok; float v = edit->text().toFloat(&ok);
@@ -1709,6 +1733,7 @@ void MainWindow::createRehabPage()
     actBtnRow->addWidget(actStartBtn);
     actBtnRow->addWidget(actStopBtn);
     m1ActLay->addLayout(actBtnRow);
+    m1ActLay->addStretch();   // 同上：参数行保持紧凑
 
     connect(actStartBtn, &QPushButton::clicked, this, [this]() {
         if (!protoWorker->isOpen()) return;
@@ -1728,6 +1753,9 @@ void MainWindow::createRehabPage()
     m1ActiveLayout->addWidget(m1ActiveBox);
     m1ActiveLayout->addStretch();
     m1RehabTabs->addTab(m1ActiveTab, QStringLiteral("主动"));
+    // 参数面板不需要占满整页：给一个高度上限，
+    // 否则窗口放大时它会被拉伸得很高，把下方的轨迹跟踪图挤出可视区。
+    m1RehabTabs->setMaximumHeight(300);
     dualLayout->addWidget(m1RehabTabs, 1);
 
     // M2 康复面板 (被动 + 主动)
@@ -1773,7 +1801,8 @@ void MainWindow::createRehabPage()
         {"Fmax(N):",  0x23, "5"},
         {"刚度k:",    0x24, "10"},
     };
-    for (const auto &p : m2ActParams) {
+    for (int pi = 0; pi < 6; ++pi) {
+        const auto &p = m2ActParams[pi];
         auto *row = new QHBoxLayout;
         row->addWidget(new QLabel(QString::fromUtf8(p.label), m2ActiveBox));
         auto *edit = new QLineEdit(m2ActiveBox);
@@ -1781,6 +1810,8 @@ void MainWindow::createRehabPage()
         edit->setMaximumHeight(24);
         row->addWidget(edit, 1);
         m2ActLay->addLayout(row);
+        // 供轨迹跟踪视图读取参考轨迹参数（只读，实验开始不会把这些值下发）
+        m2ActEdits[pi] = edit;
         connect(edit, &QLineEdit::returnPressed, this, [this, edit, fid = p.fid, label = p.label]() {
             if (!protoWorker->isOpen()) return;
             bool ok; float v = edit->text().toFloat(&ok);
@@ -1800,6 +1831,7 @@ void MainWindow::createRehabPage()
     m2ActBtnRow->addWidget(m2ActStart);
     m2ActBtnRow->addWidget(m2ActStop);
     m2ActLay->addLayout(m2ActBtnRow);
+    m2ActLay->addStretch();   // 同上：参数行保持紧凑
     connect(m2ActStart, &QPushButton::clicked, this, [this]() {
         if (!protoWorker->isOpen()) return;
         QMetaObject::invokeMethod(protoWorker, "sendIOWrite", Qt::QueuedConnection,
@@ -1818,37 +1850,135 @@ void MainWindow::createRehabPage()
     m2ActiveLayout->addWidget(m2ActiveBox);
     m2ActiveLayout->addStretch();
     m2RehabTabs->addTab(m2ActiveTab, QStringLiteral("主动"));
+    m2RehabTabs->setMaximumHeight(300);   // 同上：参数面板封顶
     dualLayout->addWidget(m2RehabTabs, 1);
 
-    rootLayout->addLayout(dualLayout, 1);
+    // 双栅参数面板不需要弹性空间（它自己有 addStretch），多余的纵向空间全部给下面的轨迹图。
+    rootLayout->addLayout(dualLayout, 0);
 
-    // ── 实时曲线 (M1 + M2) ──────────────────────────
-    auto *chartRow = new QHBoxLayout;
-    chartRow->setSpacing(8);
+    // ── 轨迹跟踪实验（Motor1 + Motor2 共用一套机制）──────
+    // 参考轨迹由上位机本地生成；本区域不下发任何控制指令。
+    auto *trackerBox = new QGroupBox(
+        QStringLiteral("轨迹跟踪实验（参考轨迹由上位机本地生成，不下发任何指令）"), rehabPage);
+    auto *trackerLay = new QVBoxLayout(trackerBox);
+    trackerLay->setContentsMargins(6, 4, 6, 4);
+    trackerLay->setSpacing(4);
 
-    auto *m1ChartBox = new QGroupBox(QStringLiteral("Motor1 康复曲线"), rehabPage);
-    auto *m1ChartLayout = new QVBoxLayout(m1ChartBox);
-    m1ChartLayout->setContentsMargins(2, 2, 2, 2);
-    m1ChartLayout->setSpacing(2);
-    chartRow->addWidget(m1ChartBox, 1);
-    {
-        const uint8_t ids[] = {0x01, 0x02, 0x0B};
-        const QColor colors[] = {QColor(0x1f,0x77,0xb4), QColor(0xff,0x7f,0x0e), QColor(0x2c,0xa0,0x2c)};
-        buildMotorChart(rehabM1Ctx, m1ChartBox, ids, 3, colors);
-    }
+    auto *trackerCtrlRow = new QHBoxLayout;
+    auto *trackerHint = new QLabel(
+        QStringLiteral("参考轨迹参数取自各电机「主动」选项卡：T波速度 / 极限角1 / 极限角2 / 停顿时间"),
+        trackerBox);
+    trackerHint->setStyleSheet(QStringLiteral("QLabel { font-size: 10px; color: #777; }"));
+    trackerCtrlRow->addWidget(trackerHint, 1);
+    trackerCtrlRow->addWidget(new QLabel(QStringLiteral("周期数:"), trackerBox));
+    trackerCyclesSpin = new QSpinBox(trackerBox);
+    trackerCyclesSpin->setRange(1, 20);
+    trackerCyclesSpin->setValue(5);
+    trackerCyclesSpin->setMaximumHeight(24);
+    trackerCyclesSpin->setFixedWidth(64);
+    trackerCtrlRow->addWidget(trackerCyclesSpin);
+    trackerStartBtn = new QPushButton(QStringLiteral("▶ 开始实验"), trackerBox);
+    trackerStartBtn->setMinimumHeight(26);
+    trackerStartBtn->setStyleSheet(QStringLiteral(
+        "QPushButton { background-color: #4caf50; color: white; font-weight: bold; padding: 0px 14px; }"));
+    trackerCtrlRow->addWidget(trackerStartBtn);
+    auto *trackerPreviewBtn = new QPushButton(QStringLiteral("刷新预览"), trackerBox);
+    trackerPreviewBtn->setMinimumHeight(26);
+    trackerCtrlRow->addWidget(trackerPreviewBtn);
+    trackerStateLabel = new QLabel(QStringLiteral("未开始"), trackerBox);
+    trackerStateLabel->setStyleSheet(QStringLiteral("QLabel { font-weight: bold; color: #1565c0; }"));
+    trackerCtrlRow->addWidget(trackerStateLabel);
+    trackerLay->addLayout(trackerCtrlRow);
 
-    auto *m2ChartBox = new QGroupBox(QStringLiteral("Motor2 康复曲线"), rehabPage);
-    auto *m2ChartLayout = new QVBoxLayout(m2ChartBox);
-    m2ChartLayout->setContentsMargins(2, 2, 2, 2);
-    m2ChartLayout->setSpacing(2);
-    chartRow->addWidget(m2ChartBox, 1);
-    {
-        const uint8_t ids[] = {0x11, 0x12, 0x1D};
-        const QColor colors[] = {QColor(0x1f,0x77,0xb4), QColor(0xff,0x7f,0x0e), QColor(0xd6,0x27,0x28)};
-        buildMotorChart(rehabM2Ctx, m2ChartBox, ids, 3, colors);
-    }
+    auto *trackerChartRow = new QHBoxLayout;
+    trackerChartRow->setSpacing(8);
 
-    rootLayout->addLayout(chartRow, 1);
+    // 单张轨迹跟踪图（Motor1 / Motor2 各一张，同一套机制）
+    auto makeTrackerColumn = [&](TrackerCtx &ctx, const QString &title,
+                                 uint8_t tId, uint8_t aId, uint8_t rId,
+                                 const QString &rawLabel) -> QGroupBox* {
+        auto *box = new QGroupBox(title, trackerBox);
+        auto *lay = new QVBoxLayout(box);
+        lay->setContentsMargins(2, 2, 2, 2);
+        lay->setSpacing(2);
+
+        ctx.name = title;
+        ctx.targetId = tId;
+        ctx.actualId = aId;
+        ctx.rawId = rId;
+        buildTrackerChart(ctx, box);
+        lay->addWidget(ctx.view);
+
+        auto *cbRow = new QHBoxLayout;
+        cbRow->setSpacing(8);
+        ctx.refCheck = new QCheckBox(QStringLiteral("显示参考轨迹"), box);
+        ctx.refCheck->setChecked(true);
+        ctx.refCheck->setStyleSheet(QStringLiteral("QCheckBox { font-size: 10px; color: #2ca02c; }"));
+        cbRow->addWidget(ctx.refCheck);
+        ctx.histCheck = new QCheckBox(QStringLiteral("显示历史轨迹"), box);
+        ctx.histCheck->setChecked(true);   // 扫描式实时绘图：默认开启，随游标从左向右生长
+        ctx.histCheck->setToolTip(QStringLiteral("已收到的历史数据按时间顺序连成曲线；取消勾选可只看当前点与参考轨迹"));
+        ctx.histCheck->setStyleSheet(QStringLiteral("QCheckBox { font-size: 10px; color: #555; }"));
+        cbRow->addWidget(ctx.histCheck);
+        ctx.rawCheck = new QCheckBox(rawLabel, box);
+        ctx.rawCheck->setChecked(false);
+        ctx.rawCheck->setStyleSheet(QStringLiteral("QCheckBox { font-size: 10px; color: #884da0; }"));
+        cbRow->addWidget(ctx.rawCheck);
+        cbRow->addStretch();
+        lay->addLayout(cbRow);
+
+        ctx.readoutLabel = new QLabel(QStringLiteral("—"), box);
+        ctx.readoutLabel->setStyleSheet(QStringLiteral("QLabel { font-size: 11px; color: #333; }"));
+        ctx.readoutLabel->setWordWrap(true);
+        ctx.readoutLabel->setMinimumHeight(32);
+        ctx.readoutLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+        lay->addWidget(ctx.readoutLabel);
+
+        TrackerCtx *cp = &ctx;
+        connect(ctx.refCheck, &QCheckBox::toggled, this, [this, cp](bool on) {
+            if (cp->refSeries) cp->refSeries->setVisible(on);
+            refreshTrackerLegend(*cp);
+        });
+        connect(ctx.rawCheck, &QCheckBox::toggled, this, [this, cp](bool on) {
+            if (cp->rawSeries) cp->rawSeries->setVisible(on);
+            refreshTrackerLegend(*cp);
+        });
+        connect(ctx.histCheck, &QCheckBox::toggled, this, [this, cp](bool on) {
+            // 历史数据始终在累积，本复选框只控制是否显示（取消勾选不会丢数据）
+            if (cp->histTargetSeries) cp->histTargetSeries->setVisible(on);
+            if (cp->histActualSeries) cp->histActualSeries->setVisible(on);
+            refreshTrackerLegend(*cp);
+        });
+        return box;
+    };
+
+    trackerChartRow->addWidget(makeTrackerColumn(
+        trackerM1, QStringLiteral("Motor1 轨迹跟踪"), 0x01, 0x02, 0x0B,
+        QStringLiteral("显示下位机 0x0B 原始")), 1);
+    trackerChartRow->addWidget(makeTrackerColumn(
+        trackerM2, QStringLiteral("Motor2 轨迹跟踪"), 0x11, 0x12, 0x1D,
+        QStringLiteral("显示下位机 0x1D 原始")), 1);
+    trackerLay->addLayout(trackerChartRow);
+    rootLayout->addWidget(trackerBox, 1);   // 轨迹跟踪区吃掉多余的纵向空间
+
+    // ── 轨迹跟踪：信号连接与刷新定时器 ──────────────
+    connect(trackerStartBtn, &QPushButton::clicked, this, &MainWindow::startExperiment);
+    connect(trackerPreviewBtn, &QPushButton::clicked, this, [this]() {
+        applyReference(false);
+        appendTreatLog(QStringLiteral("参考轨迹预览已刷新（未下发指令）"));
+    });
+    connect(trackerCyclesSpin, &QSpinBox::valueChanged, this, [this](int) {
+        // 未运行时改周期数会自动刷新预览；运行中不允许改变本次实验的参考轨迹
+        if (!trackerM1.running && !trackerM2.running) applyReference(false);
+    });
+
+    mTrackerTimer = new QTimer(this);
+    mTrackerTimer->setInterval(33);   // 约 30 Hz，仅用于游标与当前点
+    connect(mTrackerTimer, &QTimer::timeout, this, &MainWindow::updateTrackerViews);
+    mTrackerTimer->start();
+
+    // 打开页面即可看到完整参考轨迹（离线预览，不需要设备在线）
+    applyReference(false);
 
     // ── 实时状态行 ──────────────────────────────────
     auto *statusRow = new QHBoxLayout;
@@ -1924,7 +2054,7 @@ void MainWindow::createRehabPage()
     auto *logLayout = new QVBoxLayout(logBox);
     treatLogEdit = new QTextEdit(rehabPage);
     treatLogEdit->setReadOnly(true);
-    treatLogEdit->setMaximumHeight(100);
+    treatLogEdit->setMaximumHeight(60);
     treatLogEdit->setFont(QFont(QStringLiteral("Consolas"), 9));
     logLayout->addWidget(treatLogEdit);
     auto *clearLog = new QPushButton(QStringLiteral("清空"), rehabPage);
@@ -2174,6 +2304,409 @@ void MainWindow::feedMotorChart(MotorChartCtx &ctx, const QMap<uint8_t, float> &
     }
 }
 
+// ═══════════════════════════════════════════════════════════
+// 轨迹跟踪视图（康复治疗页）
+//   绿线 = 上位机本地生成的固定 N 周期参考轨迹（不依赖下位机 0x0B）
+//   游标 = 当前实验时间竖直线
+//   点   = 游标上的 🔵 目标角度 / 🟠 实测角度
+//   ⚠️ 本区域的函数只做本地计时与绘图，不下发任何控制指令。
+// ═══════════════════════════════════════════════════════════
+
+// 在参考轨迹折线上按时间线性插值取值（与画出来的绿线严格一致）
+static qreal refValueAt(const QList<QPointF> &traj, qreal t)
+{
+    if (traj.isEmpty()) return 0.0;
+    if (t <= traj.first().x()) return traj.first().y();
+    for (int i = 1; i < traj.size(); ++i) {
+        if (t <= traj[i].x()) {
+            const QPointF &a = traj[i - 1];
+            const QPointF &b = traj[i];
+            const qreal dt = b.x() - a.x();
+            if (dt <= 0.0) return b.y();
+            return a.y() + (b.y() - a.y()) * ((t - a.x()) / dt);
+        }
+    }
+    return traj.last().y();
+}
+
+// 生成 N 周期分段线性三角波：
+//   保持(极限角1, 停顿) → 斜坡到极限角2 → 保持(极限角2, 停顿) → 斜坡回极限角1
+// 总时长 T = N × (2×停顿 + 2×(极限角2−极限角1)/T波速度)
+static QList<QPointF> makeRefTrajectory(float l1, float l2, float speed, float pause,
+                                        int cycles, qreal *totalT)
+{
+    if (!qIsFinite(l1)) l1 = -30.0f;
+    if (!qIsFinite(l2)) l2 = 30.0f;
+    if (!qIsFinite(speed) || speed <= 0.01f) speed = 30.0f;
+    if (!qIsFinite(pause) || pause < 0.0f) pause = 0.0f;
+    cycles = qBound(1, cycles, 20);
+
+    const qreal hold = static_cast<qreal>(pause);
+    const qreal ramp = qAbs(static_cast<qreal>(l2) - static_cast<qreal>(l1)) / static_cast<qreal>(speed);
+    qreal t = 0.0;
+
+    QList<QPointF> pts;
+    pts.append(QPointF(0.0, static_cast<qreal>(l1)));   // 起点：极限角1 保持段开始
+
+    for (int c = 0; c < cycles; ++c) {
+        t += hold; pts.append(QPointF(t, static_cast<qreal>(l1)));  // 在极限角1 保持
+        t += ramp; pts.append(QPointF(t, static_cast<qreal>(l2)));  // 斜坡 → 极限角2
+        t += hold; pts.append(QPointF(t, static_cast<qreal>(l2)));  // 在极限角2 保持
+        t += ramp; pts.append(QPointF(t, static_cast<qreal>(l1)));  // 斜坡 → 极限角1
+    }
+    if (totalT) *totalT = t;
+    return pts;
+}
+
+// 图例条目固定为三条数据曲线：参考轨迹 / 轨迹输入 / 反馈角度。
+// Qt Charts 的图例 marker 会跟随 series 可见性变化（勾选框、清空数据等都可能触发），
+// 因此每次可见性变化后都调一次本函数校正，保证图例在
+// 「开始前 / 运行中 / 结束后 / 重新开始后」四种状态下始终一致且完整。
+void MainWindow::refreshTrackerLegend(TrackerCtx &ctx)
+{
+    if (!ctx.chart || !ctx.chart->legend()) return;
+    ctx.chart->legend()->setVisible(true);
+    ctx.chart->legend()->setAlignment(Qt::AlignTop);
+    const QList<QLegendMarker *> markers = ctx.chart->legend()->markers();
+    for (QLegendMarker *m : markers) {
+        if (!m) continue;
+        QAbstractSeries *s = m->series();
+        // 只保留三种数据；时间游标、下位机原始轨迹、两个当前点不进图例
+        const bool keep = (s == ctx.refSeries) || (s == ctx.histTargetSeries)
+                          || (s == ctx.histActualSeries);
+        m->setVisible(keep);
+    }
+}
+
+void MainWindow::loadTrackerParams(TrackerCtx &ctx)
+{
+    QLineEdit **e = (ctx.targetId == 0x01) ? m1ActEdits : m2ActEdits;
+    auto rd = [](QLineEdit *w, float def) -> float {
+        if (!w) return def;
+        bool ok = false;
+        const float v = w->text().trimmed().toFloat(&ok);
+        return ok ? v : def;
+    };
+    // 顺序与「主动」选项卡一致：T波速度 / 极限角1 / 极限角2 / 停顿时间
+    ctx.speed  = rd(e[0], 30.0f);
+    ctx.limit1 = rd(e[1], -30.0f);
+    ctx.limit2 = rd(e[2], 30.0f);
+    ctx.pause  = rd(e[3], 2.0f);
+    if (!qIsFinite(ctx.speed) || ctx.speed <= 0.01f) ctx.speed = 30.0f;
+    if (!qIsFinite(ctx.pause) || ctx.pause < 0.0f) ctx.pause = 0.0f;
+    if (!qIsFinite(ctx.limit1)) ctx.limit1 = -30.0f;
+    if (!qIsFinite(ctx.limit2)) ctx.limit2 = 30.0f;
+}
+
+void MainWindow::buildTrackerChart(TrackerCtx &ctx, QWidget *parent)
+{
+    ctx.chart = new QChart();
+    ctx.chart->setAnimationOptions(QChart::NoAnimation);
+    // 图例：必须一直可见，用于标识三种数据（参考轨迹 / 轨迹输入 / 反馈角度）。
+    // 放在顶部，不会与曲线重叠；具体条目由 refreshTrackerLegend() 控制。
+    ctx.chart->legend()->setVisible(true);
+    ctx.chart->legend()->setAlignment(Qt::AlignTop);
+    ctx.chart->legend()->setLabelColor(QColor(0x33, 0x33, 0x33));
+    ctx.chart->setMargins(QMargins(4, 2, 4, 2));
+    ctx.chart->setBackgroundRoundness(0);
+
+    ctx.axisX = new QValueAxis();
+    ctx.axisX->setRange(0.0, 40.0);
+    ctx.axisX->setLabelFormat(QStringLiteral("%.0f"));
+    // 不加轴标题：康复页纵向空间紧张，轴标题会把刻度文字挤成 "..."
+    ctx.chart->addAxis(ctx.axisX, Qt::AlignBottom);
+
+    ctx.axisY = new QValueAxis();
+    ctx.axisY->setRange(-35.0, 35.0);
+    ctx.axisY->setLabelFormat(QStringLiteral("%.0f"));
+    ctx.chart->addAxis(ctx.axisY, Qt::AlignLeft);
+
+    // 康复页纵向空间紧张、且本机为高 DPI，默认字号会让刻度被省略成 "..."，
+    // 因此把两个轴的刻度字号略调小，保证数字能完整显示。
+    QFont axisFont = ctx.axisX->labelsFont();
+    if (axisFont.pointSizeF() > 0.0)
+        axisFont.setPointSizeF(qMax(6.0, axisFont.pointSizeF() - 1.5));
+    else
+        axisFont.setPixelSize(qMax(8, axisFont.pixelSize() - 3));
+    ctx.axisX->setLabelsFont(axisFont);
+    ctx.axisY->setLabelsFont(axisFont);
+    ctx.chart->legend()->setFont(axisFont);
+
+    // 层叠顺序 = addSeries 的先后（后加的在上面）：
+    //   原始曲线 → 参考轨迹 → 历史实际轨迹 → 游标 → 当前点
+    // 参考轨迹用「较粗的半透明绿带」并画在数据曲线之下：
+    //   - 游标右侧尚未扫到的部分：仍是一条完整的绿色参考线；
+    //   - 数据与参考重合时：蓝/橙细线仍清晰可见，绿带从两侧透出；
+    //   - 数据偏离参考时：彩色曲线直接跑出绿带，一目了然。
+    auto addLine = [&ctx](QLineSeries *s, const QColor &c, qreal w, Qt::PenStyle st, bool visible) {
+        QPen pen(c, w);
+        pen.setStyle(st);
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setJoinStyle(Qt::RoundJoin);
+        s->setPen(pen);
+        s->setColor(c);
+        ctx.chart->addSeries(s);
+        s->attachAxis(ctx.axisX);
+        s->attachAxis(ctx.axisY);
+        s->setVisible(visible);
+    };
+
+    ctx.rawSeries = new QLineSeries();
+    addLine(ctx.rawSeries, QColor(0x88, 0x4d, 0xa0), 1.0, Qt::SolidLine, false);
+    ctx.rawSeries->setName(QStringLiteral("下位机原始轨迹"));
+    ctx.refSeries = new QLineSeries();
+    addLine(ctx.refSeries, QColor(0x2c, 0xa0, 0x2c, 150), 3.5, Qt::SolidLine, true);
+    ctx.refSeries->setName(QStringLiteral("参考轨迹"));
+    ctx.histTargetSeries = new QLineSeries();
+    addLine(ctx.histTargetSeries, QColor(0x1f, 0x77, 0xb4), 1.8, Qt::SolidLine, true);
+    ctx.histTargetSeries->setName(QStringLiteral("轨迹输入"));
+    ctx.histActualSeries = new QLineSeries();
+    addLine(ctx.histActualSeries, QColor(0xff, 0x7f, 0x0e), 1.8, Qt::SolidLine, true);
+    ctx.histActualSeries->setName(QStringLiteral("反馈角度"));
+    ctx.cursorSeries = new QLineSeries();
+    addLine(ctx.cursorSeries, QColor(0x55, 0x55, 0x55), 1.0, Qt::DashLine, true);
+    ctx.cursorSeries->setName(QStringLiteral("时间游标"));
+
+    // 两个当前点用「不同形状 + 不同尺寸」，这样即使目标与实测重合也能分辨：
+    // 方形的 🔵 目标会被圆形/略小的 🟠 实测盖住中心，但四角仍会露出来。
+    auto addPoint = [&ctx](QScatterSeries *s, const QColor &c, qreal size,
+                           QScatterSeries::MarkerShape shape) {
+        s->setColor(c);
+        s->setBorderColor(c.darker(150));
+        s->setMarkerSize(size);
+        s->setMarkerShape(shape);
+        ctx.chart->addSeries(s);
+        s->attachAxis(ctx.axisX);
+        s->attachAxis(ctx.axisY);
+        s->setVisible(true);
+    };
+    ctx.ptTarget = new QScatterSeries();
+    addPoint(ctx.ptTarget, QColor(0x1f, 0x77, 0xb4), 12.0, QScatterSeries::MarkerShapeRectangle);
+    ctx.ptTarget->setName(QStringLiteral("轨迹输入(当前点)"));
+    ctx.ptActual = new QScatterSeries();
+    addPoint(ctx.ptActual, QColor(0xff, 0x7f, 0x0e), 10.0, QScatterSeries::MarkerShapeCircle);
+    ctx.ptActual->setName(QStringLiteral("反馈角度(当前点)"));
+
+    // 图例只保留三条数据曲线（游标、原始轨迹、当前点都从图例里排除）
+    refreshTrackerLegend(ctx);
+
+    ctx.view = new QChartView(ctx.chart, parent);
+    ctx.view->setRenderHint(QPainter::Antialiasing);
+    ctx.view->setMinimumHeight(160);
+    ctx.view->setMaximumHeight(195);
+}
+
+// 重算参考轨迹与坐标轴范围；resetState=true 时同时复位实验状态（用于「开始实验/重新开始」）
+void MainWindow::applyReference(bool resetState)
+{
+    const int cycles = trackerCyclesSpin ? trackerCyclesSpin->value() : 5;
+    for (TrackerCtx *c : {&trackerM1, &trackerM2}) {
+        loadTrackerParams(*c);
+        c->cycles = cycles;
+        qreal T = 0.0;
+        c->refTraj = makeRefTrajectory(c->limit1, c->limit2, c->speed, c->pause, cycles, &T);
+        c->totalT = T;
+
+        if (c->refSeries) {
+            c->refSeries->clear();
+            for (const QPointF &p : c->refTraj) c->refSeries->append(p);
+        }
+        if (c->axisX) c->axisX->setRange(0.0, qMax(1.0, T));
+        if (c->axisY) {
+            const qreal lo = qMin(static_cast<qreal>(c->limit1), static_cast<qreal>(c->limit2)) - 5.0;
+            const qreal hi = qMax(static_cast<qreal>(c->limit1), static_cast<qreal>(c->limit2)) + 5.0;
+            c->axisY->setRange(lo, hi);
+        }
+
+        if (resetState) {
+            c->hasTarget = c->hasActual = c->hasRaw = false;
+            c->lastTarget = c->lastActual = c->lastRaw = 0.0f;
+            c->lastTargetMs = c->lastActualMs = c->lastRawMs = 0;
+            c->dropped = 0;
+            c->nowT = 0.0;
+            c->running = false;
+            c->finished = false;
+            // 清空历史痕迹，让新一轮实验从空白开始“扫”一遍
+            const bool showHist = c->histCheck ? c->histCheck->isChecked() : true;
+            if (c->histTargetSeries) { c->histTargetSeries->clear(); c->histTargetSeries->setVisible(showHist); }
+            if (c->histActualSeries) { c->histActualSeries->clear(); c->histActualSeries->setVisible(showHist); }
+            if (c->rawSeries) c->rawSeries->clear();
+            // 重新开始后图例保持完整
+            refreshTrackerLegend(*c);
+        } else {
+            c->nowT = qBound(0.0, c->nowT, qMax(0.001, c->totalT));
+        }
+    }
+    updateTrackerViews();
+}
+
+void MainWindow::startExperiment()
+{
+    // ⚠️ 需求 D5：本函数只做本地计时与绘图，不允许调用任何 send* 下发函数。
+    applyReference(true);
+    trackerM1.clock.start();
+    trackerM2.clock.start();
+    trackerM1.running = true;
+    trackerM2.running = true;
+    if (trackerStartBtn) trackerStartBtn->setText(QStringLiteral("重新开始"));
+    if (treatStatusLabel)
+        treatStatusLabel->setText(QStringLiteral("轨迹跟踪实验运行中（仅本地计时与绘图，未下发控制指令）"));
+    appendTreatLog(QStringLiteral("轨迹跟踪实验开始：%1 周期 / M1 总时长 %2 s / M2 总时长 %3 s")
+        .arg(trackerM1.cycles)
+        .arg(static_cast<double>(trackerM1.totalT), 0, 'f', 1)
+        .arg(static_cast<double>(trackerM2.totalT), 0, 'f', 1));
+    updateTrackerViews();
+}
+
+void MainWindow::updateTrackerViews()
+{
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    qreal maxT = 0.0;
+    bool anyRunning = false;
+
+    for (TrackerCtx *c : {&trackerM1, &trackerM2}) {
+        if (c->running) {
+            c->nowT = static_cast<qreal>(c->clock.elapsed()) / 1000.0;
+            if (c->nowT >= c->totalT) {
+                c->nowT = c->totalT;
+                c->running = false;
+                c->finished = true;
+            }
+        }
+        maxT = qMax(maxT, c->totalT);
+        anyRunning = anyRunning || c->running;
+
+        const qreal t = c->nowT;
+        const qreal ylo = c->axisY ? c->axisY->min() : -35.0;
+        const qreal yhi = c->axisY ? c->axisY->max() : 35.0;
+
+        if (c->cursorSeries) {
+            c->cursorSeries->clear();
+            c->cursorSeries->append(t, ylo);
+            c->cursorSeries->append(t, yhi);
+        }
+
+        const bool tStale = c->running && c->hasTarget && (nowMs - c->lastTargetMs > 300);
+        const bool aStale = c->running && c->hasActual && (nowMs - c->lastActualMs > 300);
+
+        if (c->ptTarget) {
+            c->ptTarget->clear();
+            if (c->hasTarget) c->ptTarget->append(t, static_cast<qreal>(c->lastTarget));
+            c->ptTarget->setColor(tStale ? QColor(0xb0, 0xbe, 0xc5) : QColor(0x1f, 0x77, 0xb4));
+        }
+        if (c->ptActual) {
+            c->ptActual->clear();
+            if (c->hasActual) c->ptActual->append(t, static_cast<qreal>(c->lastActual));
+            c->ptActual->setColor(aStale ? QColor(0xb0, 0xbe, 0xc5) : QColor(0xff, 0x7f, 0x0e));
+        }
+
+        if (c->readoutLabel) {
+            const qreal ref = refValueAt(c->refTraj, t);
+            QString s;
+            if (!c->hasTarget && !c->hasActual) {
+                s = QStringLiteral("t = %1 / %2 s　[等待下位机数据]　丢弃异常 %3")
+                        .arg(static_cast<double>(t), 0, 'f', 2)
+                        .arg(static_cast<double>(c->totalT), 0, 'f', 1)
+                        .arg(c->dropped);
+            } else {
+                const qreal err = ref - static_cast<qreal>(c->lastActual);
+                s = QStringLiteral("t = %1 / %2 s　参考 %3°　目标 %4°　实测 %5°　误差 %6°")
+                        .arg(static_cast<double>(t), 0, 'f', 2)
+                        .arg(static_cast<double>(c->totalT), 0, 'f', 1)
+                        .arg(ref, 0, 'f', 2)
+                        .arg(static_cast<double>(c->lastTarget), 0, 'f', 2)
+                        .arg(static_cast<double>(c->lastActual), 0, 'f', 2)
+                        .arg(err, 0, 'f', 2);
+                if (c->dropped > 0) s += QStringLiteral("　丢弃异常 %1").arg(c->dropped);
+            }
+            if (c->running && aStale)
+                s += QStringLiteral("　⚠ 实测断流 %1 ms").arg(nowMs - c->lastActualMs);
+            if (c->finished) s += QStringLiteral("　[已结束]");
+            c->readoutLabel->setText(s);
+        }
+    }
+
+    if (trackerStateLabel) {
+        if (anyRunning) {
+            trackerStateLabel->setText(QStringLiteral("运行中　t = %1 / %2 s")
+                .arg(static_cast<double>(trackerM1.nowT), 0, 'f', 2)
+                .arg(static_cast<double>(maxT), 0, 'f', 1));
+            trackerStateLabel->setStyleSheet(QStringLiteral("QLabel { font-weight: bold; color: #2e7d32; }"));
+        } else if (trackerM1.finished || trackerM2.finished) {
+            trackerStateLabel->setText(QStringLiteral("已结束　T = %1 s（点『重新开始』进入下一轮）")
+                .arg(static_cast<double>(maxT), 0, 'f', 1));
+            trackerStateLabel->setStyleSheet(QStringLiteral("QLabel { font-weight: bold; color: #c62828; }"));
+        } else {
+            trackerStateLabel->setText(QStringLiteral("未开始　参考轨迹 %1 周期 / %2 s")
+                .arg(trackerM1.cycles)
+                .arg(static_cast<double>(trackerM1.totalT), 0, 'f', 1));
+            trackerStateLabel->setStyleSheet(QStringLiteral("QLabel { font-weight: bold; color: #1565c0; }"));
+        }
+    }
+}
+
+// 向曲线追加一个点，超过上限时成批丢弃最旧的点（防止高采样率下无限增长）。
+// 只删到上限为止、不逐点删，保证摊销代价 O(1) 量级。
+static void appendBounded(QLineSeries *s, qreal x, qreal y, int limit = 30000)
+{
+    if (!s) return;
+    s->append(x, y);
+    const int n = s->count();
+    if (n > limit) s->removePoints(0, n - limit);
+}
+
+// 每个遥测帧调用一次：记录带时间戳的原始样本（不经过 50 ms 合并的降采样）
+void MainWindow::feedTrackerSample(const QMap<uint8_t, float> &values, qint64 ms)
+{
+    for (TrackerCtx *c : {&trackerM1, &trackerM2}) {
+        // 数值合理性过滤：非有限值，或 |角度| > |极限角| × 1.5 一律丢弃并计数。
+        // 原因：设备当前上传的遥测帧存在损坏，0x12（M2 实际位置）会偶尔出现 3e-34 量级垃圾值。
+        const float maxAbs = qMax(1.0f, qMax(qAbs(c->limit1), qAbs(c->limit2)) * 1.5f);
+
+        bool gotTarget = false;
+        bool gotActual = false;
+        if (c->targetId != 0x00 && values.contains(c->targetId)) {
+            const float v = values.value(c->targetId);
+            if (qIsFinite(v) && qAbs(v) <= maxAbs) {
+                c->lastTarget = v;
+                c->hasTarget = true;
+                c->lastTargetMs = ms;
+                gotTarget = true;
+            } else {
+                ++c->dropped;
+            }
+        }
+        if (c->actualId != 0x00 && values.contains(c->actualId)) {
+            const float v = values.value(c->actualId);
+            if (qIsFinite(v) && qAbs(v) <= maxAbs) {
+                c->lastActual = v;
+                c->hasActual = true;
+                c->lastActualMs = ms;
+                gotActual = true;
+            } else {
+                ++c->dropped;
+            }
+        }
+        if (c->rawId != 0x00 && values.contains(c->rawId)) {
+            const float v = values.value(c->rawId);
+            if (qIsFinite(v) && qAbs(v) <= maxAbs) {
+                c->hasRaw = true;
+                c->lastRaw = v;
+                c->lastRawMs = ms;
+                if (c->rawSeries && c->rawSeries->isVisible() && c->running)
+                    appendBounded(c->rawSeries, c->nowT, static_cast<qreal>(v));
+            }
+        }
+
+        // 扫描式实时绘图：历史数据按“接收时刻的实验时间”持续追加，
+        // 曲线随游标从左向右生长；已画出的历史不会因游标前进而消失。
+        // 只在本帧真的收到该 ID 时才追加，不拿上一帧的值凑点，避免伪造采样。
+        if (c->running) {
+            if (gotTarget) appendBounded(c->histTargetSeries, c->nowT, static_cast<qreal>(c->lastTarget));
+            if (gotActual) appendBounded(c->histActualSeries, c->nowT, static_cast<qreal>(c->lastActual));
+        }
+    }
+}
 // ═══════════════════════════════════════════════════════════
 // 辅助函数
 // ═══════════════════════════════════════════════════════════

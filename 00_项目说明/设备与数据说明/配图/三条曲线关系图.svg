@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="1580" viewBox="0 0 2100 1580">
+<rect width="2100" height="1580" fill="#FFFFFF"/>
+<text x="40" y="74" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="40" fill="#1F2328" font-weight="700" text-anchor="start">腕部康复上位机 · 三条曲线关系图</text>
+<text x="40" y="110" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" fill="#5A6672" font-weight="400" text-anchor="start">参考轨迹（绿） · 轨迹输入（蓝） · 反馈角度（橙）　　依据：Qt 上位机源码 ＋ STM32F407 下位机固件 main.c 交叉确认</text>
+<line x1="40" y1="126" x2="2060" y2="126" stroke="#D0D7DE" stroke-width="2"/>
+<rect x="40" y="150" width="8" height="34" rx="4" fill="#1F77B4"/>
+<text x="62" y="176" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" fill="#1F2328" font-weight="700" text-anchor="start">①  三条曲线分别在哪里产生（控制链路）</text>
+<rect x="40" y="200" width="384" height="250" rx="12" fill="#FBFCFD" stroke="#D0D7DE" stroke-width="2"/>
+<rect x="40" y="200" width="384" height="6" rx="3" fill="#1F77B4"/>
+<text x="58" y="244" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" fill="#1F2328" font-weight="700" text-anchor="start">上位机 Qt</text>
+<text x="58" y="272" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15" fill="#5A6672" font-weight="400" text-anchor="start">Uart_controller.exe</text>
+<text x="58" y="304" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#2CA02C" font-weight="400" text-anchor="start">● 本地计算「参考轨迹」</text>
+<text x="58" y="333" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">    纯标尺，不下发设备</text>
+<text x="58" y="362" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">· 下发：参数 + 启停开关</text>
+<text x="58" y="391" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">· 接收遥测，画三条曲线</text>
+<path d="M 428 325.0 L 444 325.0" stroke="#5A6672" stroke-width="2.5"/>
+<path d="M 440 319.0 L 447 325.0 L 440 331.0" fill="#5A6672"/>
+<rect x="448" y="200" width="384" height="250" rx="12" fill="#FBFCFD" stroke="#D0D7DE" stroke-width="2"/>
+<rect x="448" y="200" width="384" height="6" rx="3" fill="#1F77B4"/>
+<text x="466" y="244" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" fill="#1F2328" font-weight="700" text-anchor="start">串口链路</text>
+<text x="466" y="272" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15" fill="#5A6672" font-weight="400" text-anchor="start">CH342 · COM13 · 230400</text>
+<text x="466" y="304" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">下行：FLOAT_WRITE / IO_WRITE</text>
+<text x="466" y="333" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">上行：TELEMETRY（20 Hz）</text>
+<text x="466" y="362" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#C62828" font-weight="400" text-anchor="start">⚠ 链路存在偶发误码</text>
+<path d="M 836 325.0 L 852 325.0" stroke="#5A6672" stroke-width="2.5"/>
+<path d="M 848 319.0 L 855 325.0 L 848 331.0" fill="#5A6672"/>
+<rect x="856" y="200" width="384" height="250" rx="12" fill="#FBFCFD" stroke="#D0D7DE" stroke-width="2"/>
+<rect x="856" y="200" width="384" height="6" rx="3" fill="#1F77B4"/>
+<text x="874" y="244" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" fill="#1F2328" font-weight="700" text-anchor="start">下位机 MCU</text>
+<text x="874" y="272" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15" fill="#5A6672" font-weight="400" text-anchor="start">STM32F407 · TIM2 100 Hz</text>
+<text x="874" y="304" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#1F77B4" font-weight="400" text-anchor="start">● Order_Creat_process()</text>
+<text x="874" y="333" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#1F77B4" font-weight="400" text-anchor="start">    生成「轨迹输入」In_val</text>
+<text x="874" y="362" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">⚙ PID：(轨迹输入 − 反馈角度)</text>
+<text x="874" y="391" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">    → 输出 0x03 → PWM</text>
+<path d="M 1244 325.0 L 1260 325.0" stroke="#5A6672" stroke-width="2.5"/>
+<path d="M 1256 319.0 L 1263 325.0 L 1256 331.0" fill="#5A6672"/>
+<rect x="1264" y="200" width="384" height="250" rx="12" fill="#FBFCFD" stroke="#D0D7DE" stroke-width="2"/>
+<rect x="1264" y="200" width="384" height="6" rx="3" fill="#1F77B4"/>
+<text x="1282" y="244" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" fill="#1F2328" font-weight="700" text-anchor="start">执行机构</text>
+<text x="1282" y="272" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15" fill="#5A6672" font-weight="400" text-anchor="start">电机 + 万向节</text>
+<text x="1282" y="304" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">M1：TIM2 位置/速度环</text>
+<text x="1282" y="333" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">M2：RS00 伺服（CAN）</text>
+<text x="1282" y="362" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">实际带动腕关节运动</text>
+<path d="M 1652 325.0 L 1668 325.0" stroke="#5A6672" stroke-width="2.5"/>
+<path d="M 1664 319.0 L 1671 325.0 L 1664 331.0" fill="#5A6672"/>
+<rect x="1672" y="200" width="384" height="250" rx="12" fill="#FBFCFD" stroke="#D0D7DE" stroke-width="2"/>
+<rect x="1672" y="200" width="384" height="6" rx="3" fill="#1F77B4"/>
+<text x="1690" y="244" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" fill="#1F2328" font-weight="700" text-anchor="start">传感器</text>
+<text x="1690" y="272" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15" fill="#5A6672" font-weight="400" text-anchor="start">MPU6050 · DR304</text>
+<text x="1690" y="304" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#FF7F0E" font-weight="400" text-anchor="start">● IMU roll → 「反馈角度」</text>
+<text x="1690" y="333" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#FF7F0E" font-weight="400" text-anchor="start">    0x02，PID 的反馈量</text>
+<text x="1690" y="362" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">力/力矩 Fx..Mz → 主动康复</text>
+<text x="40" y="492" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" fill="#5A6672" font-weight="400" text-anchor="start">🟢 参考轨迹只存在于上位机　　🔵 轨迹输入与 PID 只存在于下位机　　🟠 反馈角度来自 IMU，经遥测回到上位机</text>
+<rect x="40" y="524" width="8" height="34" rx="4" fill="#1F77B4"/>
+<text x="62" y="550" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" fill="#1F2328" font-weight="700" text-anchor="start">②  三条线长什么样（示意）</text>
+<text x="378" y="549" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">＋ 速查表</text>
+<rect x="40" y="560" width="900" height="380" rx="12" fill="#FCFDFE" stroke="#D0D7DE" stroke-width="2"/>
+<line x1="110" y1="620" x2="910" y2="620" stroke="#EEF2F6" stroke-width="1"/>
+<line x1="110" y1="680" x2="910" y2="680" stroke="#EEF2F6" stroke-width="1"/>
+<line x1="110" y1="740" x2="910" y2="740" stroke="#EEF2F6" stroke-width="1"/>
+<line x1="110" y1="800" x2="910" y2="800" stroke="#EEF2F6" stroke-width="1"/>
+<line x1="110" y1="860" x2="910" y2="860" stroke="#EEF2F6" stroke-width="1"/>
+<line x1="110" y1="750.0" x2="910" y2="750.0" stroke="#DCE3EA" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="64" y="755.0" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#5A6672" font-weight="400" text-anchor="start">0°</text>
+<text x="64" y="630" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#5A6672" font-weight="400" text-anchor="start">+</text>
+<text x="64" y="900" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#5A6672" font-weight="400" text-anchor="start">−</text>
+<path d="M 130.0 868.0 L 185.0 868.0 L 263.0 632.0 L 358.0 632.0 L 436.0 868.0 L 491.0 868.0 L 569.0 632.0 L 664.0 632.0 L 742.0 868.0 L 797.0 868.0" fill="none" stroke="#2CA02C" stroke-width="11" stroke-opacity="0.28" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M 130.0 868.0 L 185.0 868.0 L 263.0 632.0 L 358.0 632.0 L 436.0 868.0 L 491.0 868.0 L 569.0 632.0 L 664.0 632.0 L 742.0 868.0 L 797.0 868.0" fill="none" stroke="#2CA02C" stroke-width="2.5" stroke-dasharray="8 6"/>
+<path d="M 152.0 851.5 L 207.0 851.5 L 285.0 648.5 L 380.0 648.5 L 458.0 851.5 L 513.0 851.5 L 591.0 648.5 L 686.0 648.5 L 764.0 851.5 L 819.0 851.5" fill="none" stroke="#1F77B4" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M 176.0 846.8 L 231.0 846.8 L 309.0 653.2 L 404.0 653.2 L 482.0 846.8 L 537.0 846.8 L 615.0 653.2 L 710.0 653.2 L 788.0 846.8 L 843.0 846.8" fill="none" stroke="#FF7F0E" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
+<rect x="690" y="582" width="26" height="6" rx="3" fill="#2CA02C"/>
+<text x="726" y="590" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#5A6672" font-weight="400" text-anchor="start">参考轨迹（上限/下限+停顿）</text>
+<rect x="690" y="608" width="26" height="6" rx="3" fill="#1F77B4"/>
+<text x="726" y="616" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#5A6672" font-weight="400" text-anchor="start">轨迹输入（被限速平滑）</text>
+<rect x="690" y="634" width="26" height="6" rx="3" fill="#FF7F0E"/>
+<text x="726" y="642" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#5A6672" font-weight="400" text-anchor="start">反馈角度（滞后跟随）</text>
+<text x="64" y="928" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="13" fill="#5A6672" font-weight="400" text-anchor="start">示意：非等比真实数据；绿色虚线为参考轨迹本身，实心部分是它的可视化强调</text>
+<rect x="976" y="550" width="1084" height="370" rx="12" fill="#FFFFFF" stroke="#D0D7DE" stroke-width="2"/>
+<rect x="976" y="550" width="1084" height="46" rx="10" fill="#F2F5F8"/>
+<rect x="976" y="584" width="1084" height="12" fill="#F2F5F8"/>
+<text x="992" y="580" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="700" text-anchor="start">颜色 / 名称</text>
+<text x="1152" y="580" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="700" text-anchor="start">谁生成</text>
+<text x="1392" y="580" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="700" text-anchor="start">是否下发</text>
+<text x="1516" y="580" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="700" text-anchor="start">关键作用</text>
+<text x="1816" y="580" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="700" text-anchor="start">依赖什么</text>
+<rect x="976" y="596" width="1084" height="108" fill="#FFFFFF"/>
+<rect x="976" y="596" width="6" height="108" fill="#2CA02C"/>
+<line x1="976" y1="704" x2="2060" y2="704" stroke="#EDF1F5" stroke-width="1.5"/>
+<text x="994" y="640" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" fill="#2CA02C" font-weight="700" text-anchor="start">🟢 参考轨迹</text>
+<text x="1154" y="632" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">上位机本地计算</text>
+<text x="1154" y="653" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">makeRefTrajectory()</text>
+<text x="1154" y="674" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">（主动页参数+周期数）</text>
+<text x="1394" y="632" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#C62828" font-weight="400" text-anchor="start">❌ 不下发</text>
+<text x="1518" y="632" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">评价标尺：「我以为应该</text>
+<text x="1518" y="653" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">这样动」。可把误差拆成</text>
+<text x="1518" y="674" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">①指令偏差 ②跟随偏差</text>
+<text x="1818" y="632" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="13.5" fill="#5A6672" font-weight="400" text-anchor="start">T波速度 / 极限角1·2</text>
+<text x="1818" y="652" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="13.5" fill="#5A6672" font-weight="400" text-anchor="start">停顿时间 / 周期数</text>
+<rect x="976" y="704" width="1084" height="108" fill="#FFFFFF"/>
+<rect x="976" y="704" width="6" height="108" fill="#1F77B4"/>
+<line x1="976" y1="812" x2="2060" y2="812" stroke="#EDF1F5" stroke-width="1.5"/>
+<text x="994" y="748" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" fill="#1F77B4" font-weight="700" text-anchor="start">🔵 轨迹输入</text>
+<text x="994" y="770" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" fill="#1F77B4" font-weight="700" text-anchor="start">(0x01)</text>
+<text x="1154" y="740" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">下位机 MCU</text>
+<text x="1154" y="761" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">Order_Creat_process()</text>
+<text x="1154" y="782" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">100 Hz 更新</text>
+<text x="1394" y="740" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#2E7D32" font-weight="400" text-anchor="start">✅ 是设定值</text>
+<text x="1518" y="740" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">M1 位置环唯一设定值</text>
+<text x="1518" y="761" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">（PID 的 In_val）；遥测</text>
+<text x="1518" y="782" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">0x01 上报；记录你的用力</text>
+<text x="1818" y="740" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="13.5" fill="#5A6672" font-weight="400" text-anchor="start">主动：Mx + Tmax + 刚度k</text>
+<text x="1818" y="760" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="13.5" fill="#5A6672" font-weight="400" text-anchor="start">被动：目标角 + 最大速度</text>
+<rect x="976" y="812" width="1084" height="108" fill="#FFFFFF"/>
+<rect x="976" y="812" width="6" height="108" fill="#FF7F0E"/>
+<line x1="976" y1="920" x2="2060" y2="920" stroke="#EDF1F5" stroke-width="1.5"/>
+<text x="994" y="856" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" fill="#FF7F0E" font-weight="700" text-anchor="start">🟠 反馈角度</text>
+<text x="994" y="878" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="18" fill="#FF7F0E" font-weight="700" text-anchor="start">(0x02)</text>
+<text x="1154" y="848" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">MPU6050 的 roll 值</text>
+<text x="1154" y="869" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">main.c 直接赋给</text>
+<text x="1154" y="890" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">Feedback_val</text>
+<text x="1394" y="848" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#2E7D32" font-weight="400" text-anchor="start">遥测上报</text>
+<text x="1518" y="848" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">PID 的反馈量，代表</text>
+<text x="1518" y="869" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">「实际在哪」；与轨迹</text>
+<text x="1518" y="890" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#1F2328" font-weight="400" text-anchor="start">输入平均差 1.51°</text>
+<text x="1818" y="848" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="13.5" fill="#5A6672" font-weight="400" text-anchor="start">腕关节真实机械角度</text>
+<rect x="40" y="980" width="8" height="34" rx="4" fill="#1F77B4"/>
+<text x="62" y="1006" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="26" fill="#1F2328" font-weight="700" text-anchor="start">③  重点：「轨迹输入」在哪起作用、怎么算出来、从哪来</text>
+<rect x="40" y="1020" width="660" height="434" rx="12" fill="#E3F2FD" stroke="#1F77B4" stroke-width="2.5"/>
+<text x="62" y="1060" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="23" fill="#1F77B4" font-weight="700" text-anchor="start">🔵 它在哪起作用</text>
+<circle cx="68" cy="1092" r="4" fill="#1F77B4"/>
+<text x="82" y="1098" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#1F2328" font-weight="400" text-anchor="start">唯一设定值：M1 位置环的 PID 输入量 In_val，100 Hz 刷新</text>
+<circle cx="68" cy="1125" r="4" fill="#1F77B4"/>
+<text x="82" y="1131" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#1F2328" font-weight="400" text-anchor="start">控制公式：偏差 = 轨迹输入 − 反馈角度 → PID → 输出(0x03) → PWM</text>
+<circle cx="68" cy="1158" r="4" fill="#1F77B4"/>
+<text x="82" y="1164" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#1F2328" font-weight="400" text-anchor="start">遥测上报：作为 0x01 发出（20 Hz），所以它就是设备「此刻准备去的位置」</text>
+<circle cx="68" cy="1191" r="4" fill="#1F77B4"/>
+<text x="82" y="1197" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#1F2328" font-weight="400" text-anchor="start">人机交互产物：主动康复时它记录的是「你的用力推动出来的位置」</text>
+<rect x="62" y="1316" width="616" height="112" rx="10" fill="#FFFFFF" stroke="#FF7F0E" stroke-width="2"/>
+<text x="80" y="1346" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="17" fill="#FF7F0E" font-weight="700" text-anchor="start">⚠ 关键澄清</text>
+<text x="80" y="1374" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#1F2328" font-weight="400" text-anchor="start">T 波（0x0B）在任何模式下都不参与轨迹输入的生成，它只是遥测里那条绿色参照</text>
+<text x="80" y="1398" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#1F2328" font-weight="400" text-anchor="start">线。</text>
+<rect x="720" y="1020" width="680" height="352" rx="12" fill="#FFFDF5" stroke="#FF7F0E" stroke-width="2.5"/>
+<text x="742" y="1058" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" fill="#FF7F0E" font-weight="700" text-anchor="start">A  主动康复 —— 力顺应（导纳型）</text>
+<text x="742" y="1086" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">轨迹输入由【力矩 + Tmax + 刚度 k】积分而来</text>
+<rect x="740" y="1104" width="640" height="167" rx="8" fill="#2B2F36"/>
+<text x="754" y="1128" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">mx   = DR304[3];            // Mx 力矩 (N·m)</text>
+<text x="754" y="1149" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">tmax = actv_tmax;  k = actv_stiffness;</text>
+<text x="754" y="1170" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">if (fabs(mx) &gt; tmax)</text>
+<text x="754" y="1191" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">    v = -sign(mx)*(fabs(mx)-tmax)/k;   // 超限÷k</text>
+<text x="754" y="1212" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">else  v = 0.0f;                       // 冻结</text>
+<text x="754" y="1233" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">traj += v * 0.01f;                    // 积分</text>
+<text x="754" y="1254" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">Control_P_PID.In_val = traj;          // ← 0x01</text>
+<circle cx="748" cy="1287" r="4" fill="#FF7F0E"/>
+<text x="762" y="1293" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15.5" fill="#1F2328" font-weight="400" text-anchor="start">|Mx| ≤ Tmax → 速度 0 → 轨迹冻结（轻碰不动的门槛）</text>
+<circle cx="748" cy="1317" r="4" fill="#FF7F0E"/>
+<text x="762" y="1323" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15.5" fill="#1F2328" font-weight="400" text-anchor="start">用力越大走得越快；k 越大同样力矩越慢 → 越「硬」</text>
+<rect x="1420" y="1020" width="640" height="352" rx="12" fill="#F7FCF8" stroke="#2CA02C" stroke-width="2.5"/>
+<text x="1442" y="1058" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="22" fill="#2CA02C" font-weight="700" text-anchor="start">B  被动康复 / C  手动调试</text>
+<text x="1442" y="1086" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#5A6672" font-weight="400" text-anchor="start">轨迹输入由【目标角度 + 最大速度 + 固定加速度】规划而来</text>
+<rect x="1440" y="1104" width="600" height="146" rx="8" fill="#2B2F36"/>
+<text x="1454" y="1128" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">target = 康复最大/最小角度（状态机）</text>
+<text x="1454" y="1149" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">       / 上位机「角度目标」（手动）</text>
+<text x="1454" y="1170" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">error  = target - traj;</text>
+<text x="1454" y="1191" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">v_max  = min(最大速度, sqrt(2*0.1*dist));</text>
+<text x="1454" y="1212" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">加速度恒为 0.1 °/周期²，速度限幅后累加</text>
+<text x="1454" y="1233" font-family="Consolas, Courier New, monospace" font-size="15" fill="#E6EDF3" font-weight="400" text-anchor="start">到 |error|&lt;0.05 → 切换目标</text>
+<text x="1442" y="1282" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="16" fill="#2CA02C" font-weight="700" text-anchor="start">→ 不依赖力反馈，也不依赖角度反馈</text>
+<rect x="720" y="1388" width="1340" height="140" rx="12" fill="#F2F5F8" stroke="#5A6672" stroke-width="2"/>
+<text x="742" y="1422" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="19" fill="#1F2328" font-weight="700" text-anchor="start">一句话总结</text>
+<text x="742" y="1450" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15.5" fill="#1F2328" font-weight="400" text-anchor="start">轨迹输入 = Control_P_PID.In_val = m1_traj_current（100 Hz）：主动康复 = 由 Mx + Tmax + 刚度 k 积分而来；被动/手动 = 由目标角度 + 最大速度 + 0.1°/周期² 规划而来。</text>
+<text x="742" y="1476" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="15.5" fill="#C62828" font-weight="400" text-anchor="start">两个「误差」别混：控制内环偏差 = 轨迹输入 − 反馈角度（固件内部）；界面显示误差 = 参考轨迹 − 反馈角度（上位机读数行）。</text>
+<text x="40" y="1556" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="14" fill="#5A6672" font-weight="400" text-anchor="start">生成依据：03-HostApp/01_SerialConsole（Qt 上位机）＋ 02-Firmware/01_MotorBoard/Core/Src/main.c（Order_Creat_process / Motor1_dingdian_control_process）</text>
+</svg>
